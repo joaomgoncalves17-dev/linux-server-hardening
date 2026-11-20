@@ -4,7 +4,7 @@ Projeto prático de preparação para estágio: pegar num Ubuntu Server acabado 
 
 | Fase | Hardening index (Lynis) | Testes |
 |---|---|---|
-| Sistema limpo (baseline) | **62** | 257 |
+| Sistema limpo (medição inicial) | **62** | 257 |
 | Depois da checklist | **66** | 258 |
 | Depois da checklist + extras | **75** | 266 |
 
@@ -17,13 +17,13 @@ Projeto prático de preparação para estágio: pegar num Ubuntu Server acabado 
 - **VM endurecida:** `hardening-lab` — `192.168.122.6`, utilizador `joao`
 - **VM de referência:** `linuxhardening2` — `192.168.122.11`, instalação limpa a partir da mesma ISO
 
-> **Nota de transparência:** na VM `hardening-lab` não corri o Lynis antes de começar a mexer no sistema. Para ter um ponto de partida honesto, medi o baseline numa segunda VM limpa (`linuxhardening2`), instalada a partir da mesma ISO. As duas máquinas partem do mesmo estado, por isso a comparação é válida, mas não é rigorosamente a mesma máquina.
+> **Nota de transparência:** na VM `hardening-lab` não executei o Lynis antes de começar a alterar o sistema. Para ter um ponto de partida honesto, fiz a medição inicial numa segunda VM limpa (`linuxhardening2`), instalada a partir da mesma ISO. As duas máquinas partem do mesmo estado, por isso a comparação é válida, mas não é rigorosamente a mesma máquina.
 
 ---
 
 ## 1. Ponto de partida
 
-### Baseline do Lynis (VM limpa)
+### Medição inicial com o Lynis (VM limpa)
 
 ```bash
 sudo lynis audit system
@@ -35,17 +35,17 @@ Resultado: **Hardening index 62**, 257 testes. Firewall marcada como presente, m
 
 ### Acesso SSH por password, porta 22
 
-No início o acesso era feito com `ssh joao@192.168.122.6` e password, na porta 22 por omissão. É exatamente isto que um bot na Internet tenta forçar.
+No início o acesso era feito com `ssh joao@192.168.122.6` e password, na porta 22 por omissão. É este o acesso que os bots tentam obter por força bruta.
 
 ![Login SSH com password](imagens/02-ssh-login-com-password-antes.png)
 
-### Snapshot antes de mexer
+### Snapshot antes de alterar o sistema
 
 ```bash
 sudo virsh snapshot-create-as hardening-lab limpo
 ```
 
-**Porquê:** ao mexer em SSH e firewall é fácil ficar trancado fora da máquina. Com um snapshot posso voltar atrás em segundos.
+**Porquê:** ao alterar o SSH e a firewall é fácil perder o acesso à máquina. Com um snapshot posso voltar atrás em segundos.
 
 ![Snapshot da VM](imagens/03-snapshot-vm-limpo.png)
 
@@ -63,7 +63,7 @@ sudo ufw allow 22/tcp             # temporário: não perder a sessão atual
 sudo ufw enable
 ```
 
-**Porquê:** o princípio é "negar por omissão". Só fica aberto o que tem de estar. A porta 22 ficou aberta temporariamente porque o `ss -tlnp` mostrava o `sshd` ainda a escutar na 22. Fechá-la antes de mudar a porta cortava-me o acesso.
+**Porquê:** o princípio é "negar por omissão". Só fica aberto o que tem de estar. A porta 22 ficou aberta temporariamente porque o `ss -tlnp` mostrava o `sshd` ainda a escutar na 22. Fechá-la antes de mudar a porta cortar-me-ia o acesso.
 
 ![Políticas e regras UFW](imagens/04-ufw-politicas-e-regras.png)
 
@@ -120,7 +120,7 @@ port    = 2222
 ```
 
 - **`maxretry` / `findtime`**: 5 falhas em 10 minutos e o IP é banido.
-- **`bantime = 5h`**: tempo de castigo. Mais longo do que o valor por omissão para desencorajar bots.
+- **`bantime = 5h`**: duração do bloqueio. Mais longo do que o valor por omissão para desencorajar bots.
 - **`backend = systemd`**: o Ubuntu recente regista os logins no journal e não num ficheiro `auth.log`, por isso o fail2ban tem de ler do journal.
 - **`port = 2222`**: o ban tem de bloquear a porta onde o SSH realmente está.
 - Usa-se `jail.local` e não `jail.conf` porque o `.conf` é reescrito nas atualizações do pacote.
